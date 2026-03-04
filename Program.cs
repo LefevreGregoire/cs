@@ -143,49 +143,10 @@ void DrawCell(int x, int y)
         for (int x = 0; x < Width; x++)
             grid[x, y] = CellType.Wall;
 
-    var stackX = new int[CellWidth * CellHeight];
-    var stackY = new int[CellWidth * CellHeight];
-    var stackTop = 0;
+    // Recursively carve passages using depth-first search
+    CarvePassages(0, 0, grid);
 
-    var visited = new bool[CellWidth, CellHeight];
-
-    var startCX = 0;
-    var startCY = 0;
-    visited[startCX, startCY] = true;
-    grid[startCX * CellScale, startCY * CellScale] = CellType.Corridor;
-
-    stackX[stackTop] = startCX;
-    stackY[stackTop] = startCY;
-    stackTop++;
-
-    while (stackTop > 0)
-    {
-        var cx = stackX[stackTop - 1];
-        var cy = stackY[stackTop - 1];
-
-        var directions = new List<int> { 0, 1, 2, 3 };
-        rng.Shuffle(directions);
-
-        var found = false;
-        foreach (var dir in directions)
-        {
-            var nx = cx + dx[dir];
-            var ny = cy + dy[dir];
-            if (nx >= 0 && nx < CellWidth && ny >= 0 && ny < CellHeight && !visited[nx, ny])
-            {
-                grid[cx * CellScale + dx[dir], cy * CellScale + dy[dir]] = CellType.Corridor;
-                grid[nx * CellScale, ny * CellScale] = CellType.Corridor;
-                visited[nx, ny] = true;
-                stackX[stackTop] = nx;
-                stackY[stackTop] = ny;
-                stackTop++;
-                found = true;
-                break;
-            }
-        }
-        if (!found) stackTop--;
-    }
-
+    // Set player position and exit
     var playerX = 0;
     var playerY = 0;
     var exitX = (CellWidth - 1) * CellScale;
@@ -195,6 +156,33 @@ void DrawCell(int x, int y)
     grid[exitX, exitY] = CellType.Exit;
 
     return (playerX, playerY);
+}
+
+void CarvePassages(int cx, int cy, CellType[,] grid)
+{
+    // Mark current cell as corridor (visited)
+    grid[cx * CellScale, cy * CellScale] = CellType.Corridor;
+
+    // Randomize directions and explore neighbors
+    var directions = new List<int> { 0, 1, 2, 3 };
+    rng.Shuffle(directions);
+
+    foreach (var dir in directions)
+    {
+        var nx = cx + dx[dir];
+        var ny = cy + dy[dir];
+
+        // Check if neighbor is within bounds and unvisited (wall)
+        if (nx >= 0 && nx < CellWidth && ny >= 0 && ny < CellHeight && 
+            grid[nx * CellScale, ny * CellScale] == CellType.Wall)
+        {
+            // Carve passage between current and neighbor
+            grid[cx * CellScale + dx[dir], cy * CellScale + dy[dir]] = CellType.Corridor;
+            
+            // Recursively carve passages from neighbor
+            CarvePassages(nx, ny, grid);
+        }
+    }
 }
 
 void DrawInitialScreen(int playerX, int playerY)
