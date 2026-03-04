@@ -49,110 +49,12 @@ const char ExitChar = '★';
 const char CorridorChar = '·';
 
 var maze = new CellType[Width, Height];
-
-// Direction arrays
-var offsetY = OffsetY;
-var offsetX = OffsetX;
-
 var dx = new[] { 0, 1, 0, -1 };
 var dy = new[] { -1, 0, 1, 0 };
-
 var rng = new Random();
 
-// Initialize all cells as walls
-for (int y = 0; y < Height; y++)
-    for (int x = 0; x < Width; x++)
-        maze[x, y] = CellType.Wall;
-
-var stackX = new int[CellWidth * CellHeight];
-var stackY = new int[CellWidth * CellHeight];
-var stackTop = 0;
-
-var visited = new bool[CellWidth, CellHeight];
-
-var startCX = 0;
-var startCY = 0;
-visited[startCX, startCY] = true;
-maze[startCX * CellScale, startCY * CellScale] = CellType.Corridor;
-
-stackX[stackTop] = startCX;
-stackY[stackTop] = startCY;
-stackTop++;
-
-while (stackTop > 0)
-{
-    var cx = stackX[stackTop - 1];
-    var cy = stackY[stackTop - 1];
-
-    var directions = new List<int> { 0, 1, 2, 3 };
-    rng.Shuffle(directions);
-
-    var found = false;
-    foreach (var dir in directions)
-    {
-        var nx = cx + dx[dir];
-        var ny = cy + dy[dir];
-        if (nx >= 0 && nx < CellWidth && ny >= 0 && ny < CellHeight && !visited[nx, ny])
-        {
-            maze[cx * CellScale + dx[dir], cy * CellScale + dy[dir]] = CellType.Corridor;
-            maze[nx * CellScale, ny * CellScale] = CellType.Corridor;
-            visited[nx, ny] = true;
-            stackX[stackTop] = nx;
-            stackY[stackTop] = ny;
-            stackTop++;
-            found = true;
-            break;
-        }
-    }
-    if (!found) stackTop--;
-}
-
-// Set player position and exit
-var playerX = 0;
-var playerY = 0;
-var exitX = (CellWidth - 1) * CellScale;
-var exitY = (CellHeight - 1) * CellScale;
-
-maze[playerX, playerY] = CellType.Player;
-maze[exitX, exitY] = CellType.Exit;
-
-// Display initial maze
-Console.Clear();
-Console.CursorVisible = false;
-
-Console.SetCursorPosition(0, 0);
-Console.ForegroundColor = HeaderColor;
-Console.WriteLine(Title);
-Console.ResetColor();
-
-for (int y = 0; y < Height; y++)
-{
-    for (int x = 0; x < Width; x++)
-    {
-        Console.SetCursorPosition(offsetX + x, offsetY + y);
-        DrawCell(x, y);
-    }
-}
-
-Console.SetCursorPosition(0, offsetY + Height + 1);
-Console.ForegroundColor = ControlsColor;
-Console.Write(Controls);
-Console.ResetColor();
-
-void DrawCell(int x, int y)
-{
-    Console.SetCursorPosition(offsetX + x, offsetY + y);
-    var cell = maze[x, y];
-    (Console.ForegroundColor, var ch) = cell switch
-    {
-        CellType.Wall => (WallColor, WallChar),
-        CellType.Player => (PlayerColor, PlayerChar),
-        CellType.Exit => (ExitColor, ExitChar),
-        _ => (CorridorColor, CorridorChar)
-    };
-    Console.Write(ch);
-    Console.ResetColor();
-}
+var (playerX, playerY) = GenerateMaze(maze);
+DrawInitialScreen(playerX, playerY);
 
 // Game loop
 var won = false;
@@ -205,24 +107,113 @@ while (!won)
 }
 
 // Display end screen
-Console.SetCursorPosition(0, offsetY + Height + 3);
-if (won)
+DrawTextXY(0, OffsetY + Height + 3, WinColor, won ? WinMessage : LoseMessage);
+DrawTextXY(0, OffsetY + Height + 8, null, QuitPrompt);
+Console.CursorVisible = true;
+Console.ReadKey(true);
+
+void DrawTextXY(int x, int y, ConsoleColor? color, string text)
 {
-    Console.ForegroundColor = WinColor;
-    Console.Write(WinMessage);
-    Console.ResetColor();
-}
-else
-{
-    Console.ForegroundColor = LoseColor;
-    Console.WriteLine(LoseMessage);
+    Console.SetCursorPosition(x, y);
+    if (color.HasValue)
+        Console.ForegroundColor = color.Value;
+    Console.WriteLine(text);
     Console.ResetColor();
 }
 
-Console.SetCursorPosition(0, offsetY + Height + 8);
-Console.WriteLine(QuitPrompt);
-Console.CursorVisible = true;
-Console.ReadKey(true);
+void DrawCell(int x, int y)
+{
+    Console.SetCursorPosition(OffsetX + x, OffsetY + y);
+    var cell = maze[x, y];
+    (Console.ForegroundColor, var ch) = cell switch
+    {
+        CellType.Wall => (WallColor, WallChar),
+        CellType.Player => (PlayerColor, PlayerChar),
+        CellType.Exit => (ExitColor, ExitChar),
+        _ => (CorridorColor, CorridorChar)
+    };
+    Console.Write(ch);
+    Console.ResetColor();
+}
+
+(int, int) GenerateMaze(CellType[,] grid)
+{
+    // Initialize all cells as walls
+    for (int y = 0; y < Height; y++)
+        for (int x = 0; x < Width; x++)
+            grid[x, y] = CellType.Wall;
+
+    var stackX = new int[CellWidth * CellHeight];
+    var stackY = new int[CellWidth * CellHeight];
+    var stackTop = 0;
+
+    var visited = new bool[CellWidth, CellHeight];
+
+    var startCX = 0;
+    var startCY = 0;
+    visited[startCX, startCY] = true;
+    grid[startCX * CellScale, startCY * CellScale] = CellType.Corridor;
+
+    stackX[stackTop] = startCX;
+    stackY[stackTop] = startCY;
+    stackTop++;
+
+    while (stackTop > 0)
+    {
+        var cx = stackX[stackTop - 1];
+        var cy = stackY[stackTop - 1];
+
+        var directions = new List<int> { 0, 1, 2, 3 };
+        rng.Shuffle(directions);
+
+        var found = false;
+        foreach (var dir in directions)
+        {
+            var nx = cx + dx[dir];
+            var ny = cy + dy[dir];
+            if (nx >= 0 && nx < CellWidth && ny >= 0 && ny < CellHeight && !visited[nx, ny])
+            {
+                grid[cx * CellScale + dx[dir], cy * CellScale + dy[dir]] = CellType.Corridor;
+                grid[nx * CellScale, ny * CellScale] = CellType.Corridor;
+                visited[nx, ny] = true;
+                stackX[stackTop] = nx;
+                stackY[stackTop] = ny;
+                stackTop++;
+                found = true;
+                break;
+            }
+        }
+        if (!found) stackTop--;
+    }
+
+    var playerX = 0;
+    var playerY = 0;
+    var exitX = (CellWidth - 1) * CellScale;
+    var exitY = (CellHeight - 1) * CellScale;
+
+    grid[playerX, playerY] = CellType.Player;
+    grid[exitX, exitY] = CellType.Exit;
+
+    return (playerX, playerY);
+}
+
+void DrawInitialScreen(int playerX, int playerY)
+{
+    Console.Clear();
+    Console.CursorVisible = false;
+
+    DrawTextXY(0, 0, HeaderColor, Title);
+
+    for (int y = 0; y < Height; y++)
+    {
+        for (int x = 0; x < Width; x++)
+        {
+            DrawCell(x, y);
+        }
+    }
+
+    DrawTextXY(0, OffsetY + Height + 1, ControlsColor, Controls);
+}
 
 enum CellType
 {
