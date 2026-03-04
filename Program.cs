@@ -163,12 +163,32 @@ while (!won)
 
     var nextX = playerX;
     var nextY = playerY;
+    var shouldQuit = false;
 
-    if      (key == ConsoleKey.Z || key == ConsoleKey.UpArrow)    nextY--;
-    else if (key == ConsoleKey.S || key == ConsoleKey.DownArrow)  nextY++;
-    else if (key == ConsoleKey.Q || key == ConsoleKey.LeftArrow)  nextX--;
-    else if (key == ConsoleKey.D || key == ConsoleKey.RightArrow) nextX++;
-    else if (key == ConsoleKey.Escape) break;
+    switch (key)
+    {
+        case ConsoleKey.Z:
+        case ConsoleKey.UpArrow:
+            nextY--;
+            break;
+        case ConsoleKey.S:
+        case ConsoleKey.DownArrow:
+            nextY++;
+            break;
+        case ConsoleKey.Q:
+        case ConsoleKey.LeftArrow:
+            nextX--;
+            break;
+        case ConsoleKey.D:
+        case ConsoleKey.RightArrow:
+            nextX++;
+            break;
+        case ConsoleKey.Escape:
+            shouldQuit = true;
+            break;
+    }
+
+    if (shouldQuit) break;
 
     if (nextX >= 0 && nextX < Width && nextY >= 0 && nextY < Height && maze[nextX, nextY] != CellType.Wall)
     {
